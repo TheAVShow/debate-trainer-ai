@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <link href="/css/tailwind.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold mb-4 text-center">Debate Battle</h1>
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+      <div id="debate-history" class="mb-4">
+        {{#each debateHistory}}
+          <div class="mb-2 p-2 {{if (eq speaker 'AI') 'bg-gray-200' 'bg-blue-100'}} rounded">
+            <strong>{{speaker}}:</strong> {{argument}}
+            <span class="text-sm text-gray-500">{{timestamp}}</span>
+          </div>
+        {{/each}}
+      </div>
+      {{#if aiResponse}}
+        <div class="mb-4 p-2 bg-gray-200 rounded">
+          <strong>AI:</strong> {{aiResponse}}
+        </div>
+      {{/if}}
+      <form id="response-form" class="mb-4">
+        <div class="mb-4">
+          <label for="user-argument" class="block text-sm font-medium text-gray-700">Your Argument</label>
+          <textarea id="user-argument" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></textarea>
+        </div>
+        <button type="submit" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Submit Argument</button>
+        <button type="button" id="give-up" class="ml-2 bg-red-500 text-white p-2 rounded-md hover:bg-red-600">Give Up</button>
+      </form>
+      <button id="sign-out" class="w-full bg-red-500 text-white p-2 rounded-md hover:bg-red-600">Sign Out</button>
+    </div>
+  </div>
+  <script>
+    fetch('/config').then(response => response.json()).then(config => {
+      firebase.initializeApp(config);
+      const auth = firebase.auth();
+      const form = document.getElementById('response-form');
+      const giveUpButton = document.getElementById('give-up');
+      const signOutButton = document.getElementById('sign-out');
+      const debateId = sessionStorage.getItem('debateId');
+
+      auth.onAuthStateChanged(user => {
+        if (!user || !debateId) {
+          window.location.href = '/';
+        }
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userArgument = document.getElementById('user-argument').value;
+        const userId = auth.currentUser.uid;
+        try {
+          const response = await fetch('/api/debate/respond', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ debateId, userArgument, userId })
+          });
+          const data = await response.json();
+          if (response.ok) {
+            if (data.ended) {
+              window.location.href = `/api/debate/summary/${debateId}?userId=${userId}`;
+            } else {
+              window.location.reload();
+            }
+          } else {
+            alert(data.error);
+          }
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+
+      giveUpButton.addEventListener('click', async () => {
+        const userId = auth.currentUser.uid;
+        try {
+          const response = await fetch('/api/debate/give-up', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ debateId, userId })
+          });
+          const data = await response.json();
+          if (response.ok) {
+            window.location.href = `/api/debate/summary/${debateId}?userId=${userId}`;
+          } else {
+            alert(data.error);
+          }
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+
+      signOutButton.addEventListener('click', async () => {
+        try {
+          await auth.signOut();
+          window.location.href = '/';
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

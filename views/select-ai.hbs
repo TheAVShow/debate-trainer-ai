@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <link href="/css/tailwind.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold mb-4 text-center">Select AI Personality</h1>
+    <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+      <form id="debate-form">
+        <div class="mb-4">
+          <label for="topic" class="block text-sm font-medium text-gray-700">Debate Topic</label>
+          <input type="text" id="topic" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="personality" class="block text-sm font-medium text-gray-700">AI Personality</label>
+          <select id="personality" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required>
+            <option value="centrist">Centrist</option>
+            <option value="leftist">Leftist</option>
+            <option value="far-leftist">Far-Leftist</option>
+            <option value="right-winger">Right-Winger</option>
+            <option value="far-right-winger">Far-Right-Winger</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Start Debate</button>
+      </form>
+      <button id="sign-out" class="mt-4 w-full bg-red-500 text-white p-2 rounded-md hover:bg-red-600">Sign Out</button>
+    </div>
+  </div>
+  <script>
+    fetch('/config').then(response => response.json()).then(config => {
+      firebase.initializeApp(config);
+      const auth = firebase.auth();
+      const form = document.getElementById('debate-form');
+      const signOutButton = document.getElementById('sign-out');
+
+      auth.onAuthStateChanged(user => {
+        if (!user) {
+          window.location.href = '/';
+        }
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const topic = document.getElementById('topic').value;
+        const personality = document.getElementById('personality').value;
+        const userId = auth.currentUser.uid;
+        try {
+          const response = await fetch('/api/debate/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic, personality, userId })
+          });
+          const data = await response.json();
+          if (response.ok) {
+            sessionStorage.setItem('debateId', data.debateId);
+            window.location.href = '/debate-battle';
+          } else {
+            alert(data.error);
+          }
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+
+      signOutButton.addEventListener('click', async () => {
+        try {
+          await auth.signOut();
+          window.location.href = '/';
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

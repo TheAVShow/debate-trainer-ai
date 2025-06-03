@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <link href="/css/tailwind.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold mb-4 text-center">Debate Summary</h1>
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-2xl font-semibold mb-4">Your Grade: {{grade}}</h2>
+      <p class="mb-4">{{gradeDescription}}</p>
+      <h3 class="text-xl font-semibold mb-2">Debate History</h3>
+      <div class="mb-4">
+        {{#each debateHistory}}
+          <div class="mb-2 p-2 {{if (eq speaker 'AI') 'bg-gray-200' 'bg-blue-100'}} rounded">
+            <strong>{{speaker}}:</strong> {{argument}}
+            <span class="text-sm text-gray-500">{{timestamp}}</span>
+          </div>
+        {{/each}}
+      </div>
+      <h3 class="text-xl font-semibold mb-2">Improvement Tips</h3>
+      <ul class="list-disc pl-5 mb-4">
+        {{#each improvementTips}}
+          <li>{{this}}</li>
+        {{/each}}
+      </ul>
+      <a href="/select-ai" class="inline-block bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Start New Debate</a>
+      <button id="sign-out" class="ml-2 bg-red-500 text-white p-2 rounded-md hover:bg-red-600">Sign Out</button>
+    </div>
+  </div>
+  <script>
+    fetch('/config').then(response => response.json()).then(config => {
+      firebase.initializeApp(config);
+      const auth = firebase.auth();
+      const signOutButton = document.getElementById('sign-out');
+
+      auth.onAuthStateChanged(user => {
+        if (!user) {
+          window.location.href = '/';
+        }
+      });
+
+      signOutButton.addEventListener('click', async () => {
+        try {
+          await auth.signOut();
+          window.location.href = '/';
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
